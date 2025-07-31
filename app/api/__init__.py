@@ -1,0 +1,1 @@
+# API endpoints for AI Travel Recommender 

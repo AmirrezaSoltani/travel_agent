@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AI Travel Recommender Agent{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #64748b;
+            --success-color: #059669;
+            --warning-color: #d97706;
+            --danger-color: #dc2626;
+            --light-color: #f8fafc;
+            --dark-color: #1e293b;
+        }
+        
+        body {
+            font-family: 'Inter', 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .navbar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .navbar-brand {
+            font-weight: bold;
+            color: var(--primary-color) !important;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), #1d4ed8);
+            border: none;
+            border-radius: 10px;
+            padding: 12px 24px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(37, 99, 235, 0.3);
+        }
+        
+        .form-control {
+            border-radius: 10px;
+            border: 2px solid #e2e8f0;
+            padding: 12px 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        
+        .hero-section {
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(118, 75, 162, 0.1));
+            border-radius: 20px;
+            padding: 60px 40px;
+            margin: 40px 0;
+        }
+        
+        .feature-card {
+            text-align: center;
+            padding: 30px 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .feature-icon {
+            font-size: 3rem;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+        }
+        
+        .chat-container {
+            height: 500px;
+            overflow-y: auto;
+            border-radius: 15px;
+            background: #f8fafc;
+        }
+        
+        .message {
+            margin: 10px;
+            padding: 12px 16px;
+            border-radius: 15px;
+            max-width: 80%;
+        }
+        
+        .message.user {
+            background: var(--primary-color);
+            color: white;
+            margin-right: 0;
+            margin-left: auto;
+        }
+        
+        .message.bot {
+            background: white;
+            border: 1px solid #e2e8f0;
+            margin-left: 0;
+            margin-right: auto;
+        }
+        
+        .map-container {
+            height: 400px;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+        
+        .route-card {
+            border-left: 4px solid var(--primary-color);
+            transition: all 0.3s ease;
+        }
+        
+        .route-card:hover {
+            transform: translateX(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .footer {
+            background: rgba(30, 41, 59, 0.9);
+            color: white;
+            padding: 40px 0;
+            margin-top: 60px;
+        }
+        
+        @media (max-width: 768px) {
+            .hero-section {
+                padding: 40px 20px;
+                margin: 20px 0;
+            }
+            
+            .feature-card {
+                margin-bottom: 30px;
+            }
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-light fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-route me-2"></i>
+                <span id="brandText">AI Travel Agent</span>
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/" id="navHome">
+                            <i class="fas fa-home me-1"></i>
+                            <span>صفحه اصلی</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/chat" id="navChat">
+                            <i class="fas fa-comments me-1"></i>
+                            <span>چت</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/map" id="navMap">
+                            <i class="fas fa-map me-1"></i>
+                            <span>نقشه</span>
+                        </a>
+                    </li>
+                </ul>
+                
+                <div class="navbar-nav">
+                    <div class="nav-item dropdown me-3">
+                        <a class="nav-link dropdown-toggle" href="#" id="languageDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-globe me-1"></i>
+                            <span id="currentLang">فارسی</span>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" onclick="changeLanguage('fa')">فارسی</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="changeLanguage('en')">English</a></li>
+                        </ul>
+                    </div>
+                    <a class="nav-link" href="#" onclick="showLoginModal()" id="navLogin">
+                        <i class="fas fa-user me-1"></i>
+                        <span id="loginText">ورود</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Main Content -->
+    <main style="margin-top: 80px;">
+        {% block content %}{% endblock %}
+    </main>
+    
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4">
+                    <h5 id="footerTitle">AI Travel Recommender Agent</h5>
+                    <p id="footerDesc">سیستم هوشمند پیشنهاد مسیر سفر با قابلیت‌های پیشرفته و رابط کاربری تعاملی</p>
+                </div>
+                <div class="col-md-4">
+                    <h5 id="footerFeatures">ویژگی‌ها</h5>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-check me-2"></i><span id="feature1">پیشنهاد مسیر هوشمند</span></li>
+                        <li><i class="fas fa-check me-2"></i><span id="feature2">چت‌بات تعاملی</span></li>
+                        <li><i class="fas fa-check me-2"></i><span id="feature3">نقشه تعاملی</span></li>
+                        <li><i class="fas fa-check me-2"></i><span id="feature4">شخصی‌سازی</span></li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <h5 id="footerContact">ارتباط با ما</h5>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-envelope me-2"></i>info@aitravel.ir</li>
+                        <li><i class="fas fa-phone me-2"></i>+98 21 1234 5678</li>
+                        <li><i class="fas fa-map-marker-alt me-2"></i><span id="footerLocation">تهران، ایران</span></li>
+                    </ul>
+                </div>
+            </div>
+            <hr class="my-4">
+            <div class="text-center">
+                <p id="footerCopyright">&copy; 2024 AI Travel Recommender Agent. تمامی حقوق محفوظ است.</p>
+            </div>
+        </div>
+    </footer>
+    
+    <!-- Login Modal -->
+    <div class="modal fade" id="loginModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="loginModalTitle">ورود به سیستم</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="loginForm">
+                        <div class="mb-3">
+                            <label for="email" class="form-label" id="emailLabel">ایمیل</label>
+                            <input type="email" class="form-control" id="email" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="name" class="form-label" id="nameLabel">نام</label>
+                            <input type="text" class="form-control" id="name" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100" id="loginSubmitBtn">ورود</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.6"></script>
+    
+    <!-- Custom JS -->
+    <script>
+        function showLoginModal() {
+            const modal = new bootstrap.Modal(document.getElementById('loginModal'));
+            modal.show();
+        }
+        
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const name = document.getElementById('name').value;
+            
+            // Simple login simulation
+            localStorage.setItem('user_email', email);
+            localStorage.setItem('user_name', name);
+            
+            bootstrap.Modal.getInstance(document.getElementById('loginModal')).hide();
+            
+            // Update UI
+            const currentLanguage = localStorage.getItem('language') || 'fa';
+            const texts = getLanguageTexts(currentLanguage);
+            document.querySelector('.navbar-nav .nav-link:last-child').innerHTML = 
+                `<i class="fas fa-user me-1"></i><span>${name}</span>`;
+        });
+        
+        // Language management
+        let currentLanguage = localStorage.getItem('language') || 'fa';
+        
+        function getLanguageTexts(lang) {
+            return {
+                'fa': {
+                    'brandText': 'دستیار سفر هوشمند',
+                    'currentLang': 'فارسی',
+                    'loginText': 'ورود',
+                    'navHome': 'صفحه اصلی',
+                    'navChat': 'چت',
+                    'navMap': 'نقشه',
+                    'footerTitle': 'دستیار سفر هوشمند',
+                    'footerDesc': 'سیستم هوشمند پیشنهاد مسیر سفر با قابلیت‌های پیشرفته و رابط کاربری تعاملی',
+                    'footerFeatures': 'ویژگی‌ها',
+                    'feature1': 'پیشنهاد مسیر هوشمند',
+                    'feature2': 'چت‌بات تعاملی',
+                    'feature3': 'نقشه تعاملی',
+                    'feature4': 'شخصی‌سازی',
+                    'footerContact': 'ارتباط با ما',
+                    'footerLocation': 'تهران، ایران',
+                    'footerCopyright': '© 2024 دستیار سفر هوشمند. تمامی حقوق محفوظ است.',
+                    'loginModalTitle': 'ورود به سیستم',
+                    'emailLabel': 'ایمیل',
+                    'nameLabel': 'نام',
+                    'loginSubmitBtn': 'ورود'
+                },
+                'en': {
+                    'brandText': 'AI Travel Agent',
+                    'currentLang': 'English',
+                    'loginText': 'Login',
+                    'navHome': 'Home',
+                    'navChat': 'Chat',
+                    'navMap': 'Map',
+                    'footerTitle': 'AI Travel Recommender Agent',
+                    'footerDesc': 'Intelligent travel route recommendation system with advanced features and interactive interface',
+                    'footerFeatures': 'Features',
+                    'feature1': 'Smart Route Suggestions',
+                    'feature2': 'Interactive Chatbot',
+                    'feature3': 'Interactive Maps',
+                    'feature4': 'Personalization',
+                    'footerContact': 'Contact Us',
+                    'footerLocation': 'Tehran, Iran',
+                    'footerCopyright': '© 2024 AI Travel Recommender Agent. All rights reserved.',
+                    'loginModalTitle': 'Login to System',
+                    'emailLabel': 'Email',
+                    'nameLabel': 'Name',
+                    'loginSubmitBtn': 'Login'
+                }
+            }[lang];
+        }
+        
+        function changeLanguage(lang) {
+            currentLanguage = lang;
+            localStorage.setItem('language', lang);
+            updateUILanguage();
+            
+            // Trigger custom event for other components
+            window.dispatchEvent(new CustomEvent('languageChanged', { detail: { language: lang } }));
+        }
+        
+        function updateUILanguage() {
+            const texts = getLanguageTexts(currentLanguage);
+            
+            // Update navigation
+            document.getElementById('brandText').textContent = texts.brandText;
+            document.getElementById('currentLang').textContent = texts.currentLang;
+            document.getElementById('loginText').textContent = texts.loginText;
+            
+            // Update navigation links
+            document.querySelector('#navHome span').textContent = texts.navHome;
+            document.querySelector('#navChat span').textContent = texts.navChat;
+            document.querySelector('#navMap span').textContent = texts.navMap;
+            
+            // Update footer
+            document.getElementById('footerTitle').textContent = texts.footerTitle;
+            document.getElementById('footerDesc').textContent = texts.footerDesc;
+            document.getElementById('footerFeatures').textContent = texts.footerFeatures;
+            document.getElementById('feature1').textContent = texts.feature1;
+            document.getElementById('feature2').textContent = texts.feature2;
+            document.getElementById('feature3').textContent = texts.feature3;
+            document.getElementById('feature4').textContent = texts.feature4;
+            document.getElementById('footerContact').textContent = texts.footerContact;
+            document.getElementById('footerLocation').textContent = texts.footerLocation;
+            document.getElementById('footerCopyright').textContent = texts.footerCopyright;
+            
+            // Update login modal
+            document.getElementById('loginModalTitle').textContent = texts.loginModalTitle;
+            document.getElementById('emailLabel').textContent = texts.emailLabel;
+            document.getElementById('nameLabel').textContent = texts.nameLabel;
+            document.getElementById('loginSubmitBtn').textContent = texts.loginSubmitBtn;
+            
+            // Update page direction
+            document.documentElement.dir = currentLanguage === 'fa' ? 'rtl' : 'ltr';
+            document.documentElement.lang = currentLanguage;
+        }
+        
+        // Initialize language
+        updateUILanguage();
+        
+        // Check if user is logged in
+        const userEmail = localStorage.getItem('user_email');
+        const userName = localStorage.getItem('user_name');
+        if (userEmail && userName) {
+            document.querySelector('.navbar-nav .nav-link:last-child').innerHTML = 
+                `<i class="fas fa-user me-1"></i><span>${userName}</span>`;
+        }
+        
+        // Listen for language changes from other components
+        window.addEventListener('languageChanged', function(e) {
+            updateUILanguage();
+        });
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html> 

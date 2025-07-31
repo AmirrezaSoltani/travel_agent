@@ -1,0 +1,599 @@
+{% extends "base.html" %}
+
+{% block title %}Home - AI Travel Recommender Agent{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Hero Section -->
+    <div class="hero-section text-center">
+        <h1 class="display-4 mb-4">
+            <i class="fas fa-route text-primary me-3"></i>
+            <span id="heroTitle">دستیار هوشمند سفر شما</span>
+        </h1>
+        <p class="lead mb-5" id="heroSubtitle">
+            با استفاده از هوش مصنوعی، بهترین مسیرهای سفر را برای شما پیشنهاد می‌دهیم
+        </p>
+        
+        <!-- Route Recommendation Form -->
+        <div class="card mx-auto" style="max-width: 600px;">
+            <div class="card-body p-4">
+                <h5 class="card-title mb-4">
+                    <i class="fas fa-search me-2"></i>
+                    <span id="formTitle">جستجوی مسیر سفر</span>
+                </h5>
+                
+                <form id="routeForm" hx-post="/api/recommend" hx-target="#routeResults" hx-swap="innerHTML">
+                    <input type="hidden" id="languageInput" name="lang" value="en">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="origin" class="form-label" id="originLabel">مبدا</label>
+                            <select class="form-select" id="origin" name="origin" required>
+                                <option value="" id="selectOrigin">انتخاب کنید</option>
+                                <option value="تهران">تهران</option>
+                                <option value="اصفهان">اصفهان</option>
+                                <option value="شیراز">شیراز</option>
+                                <option value="تبریز">تبریز</option>
+                                <option value="مشهد">مشهد</option>
+                                <option value="یزد">یزد</option>
+                                <option value="کاشان">کاشان</option>
+                                <option value="قم">قم</option>
+                                <option value="کرج">کرج</option>
+                                <option value="اهواز">اهواز</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="destination" class="form-label" id="destinationLabel">مقصد</label>
+                            <select class="form-select" id="destination" name="destination" required>
+                                <option value="" id="selectDestination">انتخاب کنید</option>
+                                <option value="تهران">تهران</option>
+                                <option value="اصفهان">اصفهان</option>
+                                <option value="شیراز">شیراز</option>
+                                <option value="تبریز">تبریز</option>
+                                <option value="مشهد">مشهد</option>
+                                <option value="یزد">یزد</option>
+                                <option value="کاشان">کاشان</option>
+                                <option value="قم">قم</option>
+                                <option value="کرج">کرج</option>
+                                <option value="اهواز">اهواز</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="budget" class="form-label" id="budgetLabel">بودجه (تومان)</label>
+                            <input type="number" class="form-control" id="budget" name="budget" placeholder="مثال: 2000000">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="duration" class="form-label" id="durationLabel">مدت سفر (روز)</label>
+                            <input type="number" class="form-control" id="duration" name="duration_days" placeholder="مثال: 3">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label" id="preferencesLabel">ترجیحات</label>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="preferences" value="fastest" id="fastest">
+                                    <label class="form-check-label" for="fastest" id="fastestLabel">
+                                        <i class="fas fa-tachometer-alt me-1"></i>
+                                        سریع‌ترین
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="preferences" value="cheapest" id="cheapest">
+                                    <label class="form-check-label" for="cheapest" id="cheapestLabel">
+                                        <i class="fas fa-coins me-1"></i>
+                                        ارزان‌ترین
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="preferences" value="scenic" id="scenic">
+                                    <label class="form-check-label" for="scenic" id="scenicLabel">
+                                        <i class="fas fa-mountain me-1"></i>
+                                        زیباترین
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="preferences" value="quiet" id="quiet">
+                                    <label class="form-check-label" for="quiet" id="quietLabel">
+                                        <i class="fas fa-leaf me-1"></i>
+                                        آرام‌ترین
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100" id="searchBtn">
+                        <i class="fas fa-search me-2"></i>
+                        <span>جستجوی مسیر</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Route Results -->
+    <div id="routeResults" class="mt-5"></div>
+    
+    <!-- Features Section -->
+    <div class="row mt-5">
+        <div class="col-12 text-center mb-5">
+            <h2 id="featuresTitle">ویژگی‌های سیستم</h2>
+            <p class="lead" id="featuresSubtitle">چرا AI Travel Agent را انتخاب کنید؟</p>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card feature-card h-100">
+                <div class="card-body">
+                    <div class="feature-icon">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <h5 class="card-title" id="aiTitle">هوش مصنوعی</h5>
+                    <p class="card-text" id="aiDesc">استفاده از الگوریتم‌های پیشرفته ML برای پیشنهاد بهترین مسیرها</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card feature-card h-100">
+                <div class="card-body">
+                    <div class="feature-icon">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <h5 class="card-title" id="chatTitle">چت تعاملی</h5>
+                    <p class="card-text" id="chatDesc">گفتگو طبیعی با ربات هوشمند برای دریافت راهنمایی</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card feature-card h-100">
+                <div class="card-body">
+                    <div class="feature-icon">
+                        <i class="fas fa-map-marked-alt"></i>
+                    </div>
+                    <h5 class="card-title" id="mapTitle">نقشه تعاملی</h5>
+                    <p class="card-text" id="mapDesc">نمایش مسیرها و جاذبه‌ها روی نقشه‌های تعاملی</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card feature-card h-100">
+                <div class="card-body">
+                    <div class="feature-icon">
+                        <i class="fas fa-user-cog"></i>
+                    </div>
+                    <h5 class="card-title" id="personalTitle">شخصی‌سازی</h5>
+                    <p class="card-text" id="personalDesc">پیشنهادات شخصی‌سازی شده بر اساس ترجیحات شما</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="row mt-5">
+        <div class="col-12 text-center mb-4">
+            <h3 id="quickAccessTitle">دسترسی سریع</h3>
+        </div>
+        
+        <div class="col-md-4 text-center mb-3">
+            <a href="/chat" class="btn btn-outline-primary btn-lg w-100" id="startChatBtn">
+                <i class="fas fa-comments me-2"></i>
+                <span>شروع چت</span>
+            </a>
+        </div>
+        
+        <div class="col-md-4 text-center mb-3">
+            <a href="/map" class="btn btn-outline-success btn-lg w-100" id="viewMapBtn">
+                <i class="fas fa-map me-2"></i>
+                <span>مشاهده نقشه</span>
+            </a>
+        </div>
+        
+        <div class="col-md-4 text-center mb-3">
+            <button class="btn btn-outline-info btn-lg w-100" onclick="showPopularRoutes()" id="popularRoutesBtn">
+                <i class="fas fa-fire me-2"></i>
+                <span>مسیرهای محبوب</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Popular Routes Modal -->
+<div class="modal fade" id="popularRoutesModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="popularRoutesModalTitle">مسیرهای محبوب</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="card route-card">
+                            <div class="card-body">
+                                <h6 class="card-title">تهران → اصفهان</h6>
+                                <p class="card-text" id="route1Desc">مسیر تاریخی با جاذبه‌های فرهنگی</p>
+                                <button class="btn btn-sm btn-primary" onclick="selectRoute('تهران', 'اصفهان')" id="selectRoute1Btn">
+                                    انتخاب
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="card route-card">
+                            <div class="card-body">
+                                <h6 class="card-title">اصفهان → شیراز</h6>
+                                <p class="card-text" id="route2Desc">مسیر زیبا با تخت جمشید</p>
+                                <button class="btn btn-sm btn-primary" onclick="selectRoute('اصفهان', 'شیراز')" id="selectRoute2Btn">
+                                    انتخاب
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="card route-card">
+                            <div class="card-body">
+                                <h6 class="card-title">تهران → مشهد</h6>
+                                <p class="card-text" id="route3Desc">مسیر زیارتی و فرهنگی</p>
+                                <button class="btn btn-sm btn-primary" onclick="selectRoute('تهران', 'مشهد')" id="selectRoute3Btn">
+                                    انتخاب
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="card route-card">
+                            <div class="card-body">
+                                <h6 class="card-title">شیراز → یزد</h6>
+                                <p class="card-text" id="route4Desc">مسیر کویری و تاریخی</p>
+                                <button class="btn btn-sm btn-primary" onclick="selectRoute('شیراز', 'یزد')" id="selectRoute4Btn">
+                                    انتخاب
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function showPopularRoutes() {
+        const modal = new bootstrap.Modal(document.getElementById('popularRoutesModal'));
+        modal.show();
+    }
+    
+    function selectRoute(origin, destination) {
+        document.getElementById('origin').value = origin;
+        document.getElementById('destination').value = destination;
+        bootstrap.Modal.getInstance(document.getElementById('popularRoutesModal')).hide();
+        
+        // Scroll to form
+        document.querySelector('.hero-section').scrollIntoView({ behavior: 'smooth' });
+    }
+    
+    // Form submission handling
+    document.getElementById('routeForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const data = {
+            origin: formData.get('origin'),
+            destination: formData.get('destination'),
+            budget: formData.get('budget') ? parseFloat(formData.get('budget')) : null,
+            duration_days: formData.get('duration_days') ? parseInt(formData.get('duration_days')) : null,
+            preferences: {
+                fastest: formData.getAll('preferences').includes('fastest') ? 0.3 : 0,
+                cheapest: formData.getAll('preferences').includes('cheapest') ? 0.3 : 0,
+                scenic: formData.getAll('preferences').includes('scenic') ? 0.2 : 0,
+                quiet: formData.getAll('preferences').includes('quiet') ? 0.2 : 0
+            }
+        };
+        
+        // Show loading
+        const currentLanguage = localStorage.getItem('language') || 'fa';
+        const loadingText = currentLanguage === 'fa' ? 'در حال جستجوی بهترین مسیرها...' : 'Searching for the best routes...';
+        
+        document.getElementById('routeResults').innerHTML = `
+            <div class="text-center">
+                <div class="loading"></div>
+                <p class="mt-3">${loadingText}</p>
+            </div>
+        `;
+        
+        // Send request
+        fetch('/api/recommend', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            displayRouteResults(data);
+        })
+        .catch(error => {
+            const errorText = currentLanguage === 'fa' ? 
+                'خطا در دریافت نتایج: ' : 
+                'Error receiving results: ';
+            document.getElementById('routeResults').innerHTML = `
+                <div class="alert alert-danger">
+                    ${errorText}${error.message}
+                </div>
+            `;
+        });
+    });
+    
+    function displayRouteResults(data) {
+        const resultsDiv = document.getElementById('routeResults');
+        const currentLanguage = localStorage.getItem('language') || 'fa';
+        
+        if (!data.routes || data.routes.length === 0) {
+            const noResultsText = currentLanguage === 'fa' ? 
+                'مسیر مناسبی یافت نشد. لطفاً معیارهای جستجو را تغییر دهید.' : 
+                'No suitable route found. Please change your search criteria.';
+            
+            resultsDiv.innerHTML = `
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    ${noResultsText}
+                </div>
+            `;
+            return;
+        }
+        
+        const resultsTitle = currentLanguage === 'fa' ? 'نتایج جستجو' : 'Search Results';
+        const distanceText = currentLanguage === 'fa' ? 'فاصله' : 'Distance';
+        const timeText = currentLanguage === 'fa' ? 'زمان' : 'Time';
+        const costText = currentLanguage === 'fa' ? 'هزینه' : 'Cost';
+        const scoreText = currentLanguage === 'fa' ? 'امتیاز' : 'Score';
+        const detailsText = currentLanguage === 'fa' ? 'جزئیات' : 'Details';
+        const mapText = currentLanguage === 'fa' ? 'نقشه' : 'Map';
+        const kmText = currentLanguage === 'fa' ? 'کیلومتر' : 'km';
+        const hourText = currentLanguage === 'fa' ? 'ساعت' : 'hours';
+        const tomanText = currentLanguage === 'fa' ? 'تومان' : 'Toman';
+        
+        let html = `
+            <div class="row">
+                <div class="col-12">
+                    <h3 class="mb-4">
+                        <i class="fas fa-route me-2"></i>
+                        ${resultsTitle}
+                    </h3>
+                </div>
+            </div>
+        `;
+        
+        data.routes.forEach((route, index) => {
+            html += `
+                <div class="card route-card mb-4">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h5 class="card-title">
+                                    <i class="fas fa-map-marker-alt text-primary me-2"></i>
+                                    ${route.origin} → ${route.destination}
+                                </h5>
+                                <div class="row mt-3">
+                                    <div class="col-md-3">
+                                        <small class="text-muted">${distanceText}</small>
+                                        <div><i class="fas fa-road me-1"></i>${route.total_distance.toFixed(0)} ${kmText}</div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted">${timeText}</small>
+                                        <div><i class="fas fa-clock me-1"></i>${route.total_duration.toFixed(1)} ${hourText}</div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted">${costText}</small>
+                                        <div><i class="fas fa-coins me-1"></i>${route.total_cost.toFixed(0)} ${tomanText}</div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted">${scoreText}</small>
+                                        <div><i class="fas fa-star me-1"></i>${route.score.toFixed(2)}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <button class="btn btn-primary mb-2 w-100" onclick="viewRouteDetails(${route.id})">
+                                    <i class="fas fa-eye me-1"></i>
+                                    ${detailsText}
+                                </button>
+                                <button class="btn btn-outline-success w-100" onclick="viewRouteMap('${route.origin}', '${route.destination}')">
+                                    <i class="fas fa-map me-1"></i>
+                                    ${mapText}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        resultsDiv.innerHTML = html;
+    }
+    
+    function viewRouteDetails(routeId) {
+        const currentLanguage = localStorage.getItem('language') || 'fa';
+        const message = currentLanguage === 'fa' ? 
+            `جزئیات مسیر ${routeId} در حال بارگذاری...` : 
+            `Loading route details ${routeId}...`;
+        alert(message);
+    }
+    
+    function viewRouteMap(origin, destination) {
+        window.open(`/map?origin=${origin}&destination=${destination}`, '_blank');
+    }
+    
+    // Language management
+    function getLanguageTexts(lang) {
+        return {
+            'fa': {
+                'heroTitle': 'دستیار هوشمند سفر شما',
+                'heroSubtitle': 'با استفاده از هوش مصنوعی، بهترین مسیرهای سفر را برای شما پیشنهاد می‌دهیم',
+                'formTitle': 'جستجوی مسیر سفر',
+                'originLabel': 'مبدا',
+                'destinationLabel': 'مقصد',
+                'budgetLabel': 'بودجه (تومان)',
+                'durationLabel': 'مدت سفر (روز)',
+                'preferencesLabel': 'ترجیحات',
+                'selectOrigin': 'انتخاب کنید',
+                'selectDestination': 'انتخاب کنید',
+                'fastestLabel': 'سریع‌ترین',
+                'cheapestLabel': 'ارزان‌ترین',
+                'scenicLabel': 'زیباترین',
+                'quietLabel': 'آرام‌ترین',
+                'searchBtn': 'جستجوی مسیر',
+                'featuresTitle': 'ویژگی‌های سیستم',
+                'featuresSubtitle': 'چرا AI Travel Agent را انتخاب کنید؟',
+                'aiTitle': 'هوش مصنوعی',
+                'aiDesc': 'استفاده از الگوریتم‌های پیشرفته ML برای پیشنهاد بهترین مسیرها',
+                'chatTitle': 'چت تعاملی',
+                'chatDesc': 'گفتگو طبیعی با ربات هوشمند برای دریافت راهنمایی',
+                'mapTitle': 'نقشه تعاملی',
+                'mapDesc': 'نمایش مسیرها و جاذبه‌ها روی نقشه‌های تعاملی',
+                'personalTitle': 'شخصی‌سازی',
+                'personalDesc': 'پیشنهادات شخصی‌سازی شده بر اساس ترجیحات شما',
+                'quickAccessTitle': 'دسترسی سریع',
+                'startChatBtn': 'شروع چت',
+                'viewMapBtn': 'مشاهده نقشه',
+                'popularRoutesBtn': 'مسیرهای محبوب',
+                'popularRoutesModalTitle': 'مسیرهای محبوب',
+                'route1Desc': 'مسیر تاریخی با جاذبه‌های فرهنگی',
+                'route2Desc': 'مسیر زیبا با تخت جمشید',
+                'route3Desc': 'مسیر زیارتی و فرهنگی',
+                'route4Desc': 'مسیر کویری و تاریخی',
+                'selectRoute1Btn': 'انتخاب',
+                'selectRoute2Btn': 'انتخاب',
+                'selectRoute3Btn': 'انتخاب',
+                'selectRoute4Btn': 'انتخاب'
+            },
+            'en': {
+                'heroTitle': 'Your Smart Travel Assistant',
+                'heroSubtitle': 'Using artificial intelligence, we suggest the best travel routes for you',
+                'formTitle': 'Travel Route Search',
+                'originLabel': 'Origin',
+                'destinationLabel': 'Destination',
+                'budgetLabel': 'Budget (Toman)',
+                'durationLabel': 'Trip Duration (Days)',
+                'preferencesLabel': 'Preferences',
+                'selectOrigin': 'Select',
+                'selectDestination': 'Select',
+                'fastestLabel': 'Fastest',
+                'cheapestLabel': 'Cheapest',
+                'scenicLabel': 'Most Beautiful',
+                'quietLabel': 'Quietest',
+                'searchBtn': 'Search Route',
+                'featuresTitle': 'System Features',
+                'featuresSubtitle': 'Why choose AI Travel Agent?',
+                'aiTitle': 'Artificial Intelligence',
+                'aiDesc': 'Using advanced ML algorithms to suggest the best routes',
+                'chatTitle': 'Interactive Chat',
+                'chatDesc': 'Natural conversation with smart bot for guidance',
+                'mapTitle': 'Interactive Map',
+                'mapDesc': 'Display routes and attractions on interactive maps',
+                'personalTitle': 'Personalization',
+                'personalDesc': 'Personalized suggestions based on your preferences',
+                'quickAccessTitle': 'Quick Access',
+                'startChatBtn': 'Start Chat',
+                'viewMapBtn': 'View Map',
+                'popularRoutesBtn': 'Popular Routes',
+                'popularRoutesModalTitle': 'Popular Routes',
+                'route1Desc': 'Historical route with cultural attractions',
+                'route2Desc': 'Beautiful route with Persepolis',
+                'route3Desc': 'Pilgrimage and cultural route',
+                'route4Desc': 'Desert and historical route',
+                'selectRoute1Btn': 'Select',
+                'selectRoute2Btn': 'Select',
+                'selectRoute3Btn': 'Select',
+                'selectRoute4Btn': 'Select'
+            }
+        }[lang];
+    }
+    
+    function updateFormLanguage() {
+        const currentLanguage = localStorage.getItem('language') || 'en';
+        document.getElementById('languageInput').value = currentLanguage;
+        
+        const texts = getLanguageTexts(currentLanguage);
+        
+        // Update hero section
+        document.getElementById('heroTitle').textContent = texts.heroTitle;
+        document.getElementById('heroSubtitle').textContent = texts.heroSubtitle;
+        
+        // Update form
+        document.getElementById('formTitle').textContent = texts.formTitle;
+        document.getElementById('originLabel').textContent = texts.originLabel;
+        document.getElementById('destinationLabel').textContent = texts.destinationLabel;
+        document.getElementById('budgetLabel').textContent = texts.budgetLabel;
+        document.getElementById('durationLabel').textContent = texts.durationLabel;
+        document.getElementById('preferencesLabel').textContent = texts.preferencesLabel;
+        
+        // Update select placeholders
+        document.getElementById('selectOrigin').textContent = texts.selectOrigin;
+        document.getElementById('selectDestination').textContent = texts.selectDestination;
+        
+        // Update preference labels
+        document.getElementById('fastestLabel').textContent = texts.fastestLabel;
+        document.getElementById('cheapestLabel').textContent = texts.cheapestLabel;
+        document.getElementById('scenicLabel').textContent = texts.scenicLabel;
+        document.getElementById('quietLabel').textContent = texts.quietLabel;
+        
+        // Update button text
+        document.querySelector('#searchBtn span').textContent = texts.searchBtn;
+        
+        // Update section titles
+        document.getElementById('featuresTitle').textContent = texts.featuresTitle;
+        document.getElementById('featuresSubtitle').textContent = texts.featuresSubtitle;
+        
+        // Update feature cards
+        document.getElementById('aiTitle').textContent = texts.aiTitle;
+        document.getElementById('aiDesc').textContent = texts.aiDesc;
+        document.getElementById('chatTitle').textContent = texts.chatTitle;
+        document.getElementById('chatDesc').textContent = texts.chatDesc;
+        document.getElementById('mapTitle').textContent = texts.mapTitle;
+        document.getElementById('mapDesc').textContent = texts.mapDesc;
+        document.getElementById('personalTitle').textContent = texts.personalTitle;
+        document.getElementById('personalDesc').textContent = texts.personalDesc;
+        
+        // Update quick access section
+        document.getElementById('quickAccessTitle').textContent = texts.quickAccessTitle;
+        document.querySelector('#startChatBtn span').textContent = texts.startChatBtn;
+        document.querySelector('#viewMapBtn span').textContent = texts.viewMapBtn;
+        document.querySelector('#popularRoutesBtn span').textContent = texts.popularRoutesBtn;
+        
+        // Update modal
+        document.getElementById('popularRoutesModalTitle').textContent = texts.popularRoutesModalTitle;
+        document.getElementById('route1Desc').textContent = texts.route1Desc;
+        document.getElementById('route2Desc').textContent = texts.route2Desc;
+        document.getElementById('route3Desc').textContent = texts.route3Desc;
+        document.getElementById('route4Desc').textContent = texts.route4Desc;
+        document.getElementById('selectRoute1Btn').textContent = texts.selectRoute1Btn;
+        document.getElementById('selectRoute2Btn').textContent = texts.selectRoute2Btn;
+        document.getElementById('selectRoute3Btn').textContent = texts.selectRoute3Btn;
+        document.getElementById('selectRoute4Btn').textContent = texts.selectRoute4Btn;
+    }
+    
+    // Initialize form language
+    updateFormLanguage();
+    
+    // Listen for language changes
+    window.addEventListener('languageChanged', function(e) {
+        updateFormLanguage();
+    });
+</script>
+{% endblock %} 

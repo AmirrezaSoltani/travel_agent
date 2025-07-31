@@ -1,0 +1,884 @@
+{% extends "base.html" %}
+
+{% block title %}Map - AI Travel Recommender Agent{% endblock %}
+
+{% block extra_css %}
+<style>
+    .map-page {
+        height: calc(100vh - 160px);
+    }
+    
+    .map-container {
+        height: 100%;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    }
+    
+    .map-controls {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        z-index: 1000;
+        background: white;
+        border-radius: 10px;
+        padding: 15px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        min-width: 300px;
+    }
+    
+    .map-sidebar {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        height: 100%;
+        overflow-y: auto;
+    }
+    
+    .route-item {
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 15px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .route-item:hover {
+        border-color: var(--primary-color);
+        box-shadow: 0 4px 15px rgba(37, 99, 235, 0.1);
+    }
+    
+    .route-item.active {
+        border-color: var(--primary-color);
+        background: #f0f9ff;
+    }
+    
+    .route-stats {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 10px;
+    }
+    
+    .route-stat {
+        text-align: center;
+        flex: 1;
+    }
+    
+    .route-stat small {
+        display: block;
+        color: #64748b;
+        font-size: 0.8rem;
+    }
+    
+    .route-stat div {
+        font-weight: 600;
+        color: var(--primary-color);
+    }
+    
+    .attraction-marker {
+        background: #f59e0b;
+        color: white;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        cursor: pointer;
+    }
+    
+    .filter-panel {
+        background: white;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    }
+    
+    .filter-group {
+        margin-bottom: 15px;
+    }
+    
+    .filter-group label {
+        font-weight: 600;
+        margin-bottom: 5px;
+        display: block;
+    }
+    
+    .filter-checkbox {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+    
+    .filter-checkbox input {
+        margin-left: 8px;
+    }
+    
+    .download-btn {
+        background: var(--success-color);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 8px 16px;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .download-btn:hover {
+        background: #047857;
+        transform: translateY(-1px);
+    }
+    
+    .map-legend {
+        position: absolute;
+        bottom: 20px;
+        left: 20px;
+        background: white;
+        border-radius: 10px;
+        padding: 15px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        z-index: 1000;
+    }
+    
+    .legend-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+    
+    .legend-color {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        margin-left: 10px;
+    }
+    
+    .legend-color.origin { background: #10b981; }
+    .legend-color.destination { background: #ef4444; }
+    .legend-color.route { background: #3b82f6; }
+    .legend-color.attraction { background: #f59e0b; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row map-page">
+        <!-- Map Container -->
+        <div class="col-md-9 position-relative">
+            <div class="map-container" id="mapContainer">
+                <!-- Map will be loaded here -->
+                <div id="map" style="height: 100%; width: 100%;"></div>
+                
+                <!-- Map Controls -->
+                <div class="map-controls">
+                    <h6 class="mb-3">
+                        <i class="fas fa-cog me-2"></i>
+                        <span id="mapSettingsTitle">تنظیمات نقشه</span>
+                    </h6>
+                    
+                    <div class="mb-3">
+                        <label class="form-label" id="mapTypeLabel">نوع نقشه</label>
+                        <select class="form-select form-select-sm" id="mapType">
+                            <option value="osm">OpenStreetMap</option>
+                            <option value="satellite" id="satelliteOption">ماهواره‌ای</option>
+                            <option value="terrain" id="terrainOption">توپوگرافی</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label" id="displayLabel">نمایش</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="showAttractions" checked>
+                            <label class="form-check-label" for="showAttractions" id="attractionsLabel">
+                                جاذبه‌ها
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="showHotels" checked>
+                            <label class="form-check-label" for="showHotels" id="hotelsLabel">
+                                هتل‌ها
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="showRestaurants" checked>
+                            <label class="form-check-label" for="showRestaurants" id="restaurantsLabel">
+                                رستوران‌ها
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="showGasStations" checked>
+                            <label class="form-check-label" for="showGasStations" id="gasStationsLabel">
+                                پمپ بنزین
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <button class="btn btn-sm btn-primary w-100" onclick="downloadMap()" id="downloadMapBtn">
+                        <i class="fas fa-download me-1"></i>
+                        <span>دانلود نقشه</span>
+                    </button>
+                </div>
+                
+                <!-- Map Legend -->
+                <div class="map-legend">
+                    <h6 class="mb-2" id="legendTitle">راهنما</h6>
+                    <div class="legend-item">
+                        <div class="legend-color origin"></div>
+                        <small id="originLegend">مبدا</small>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color destination"></div>
+                        <small id="destinationLegend">مقصد</small>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color route"></div>
+                        <small id="routeLegend">مسیر</small>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color attraction"></div>
+                        <small id="attractionLegend">جاذبه</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sidebar -->
+        <div class="col-md-3">
+            <div class="map-sidebar">
+                <h5 class="mb-4">
+                    <i class="fas fa-route me-2"></i>
+                    <span id="suggestedRoutesTitle">مسیرهای پیشنهادی</span>
+                </h5>
+                
+                <!-- Route Search -->
+                <div class="mb-4">
+                    <div class="row">
+                        <div class="col-6">
+                            <label class="form-label" id="originLabel">مبدا</label>
+                            <select class="form-select form-select-sm" id="originSelect">
+                                <option value="" id="selectOriginOption">انتخاب کنید</option>
+                                <option value="تهران">تهران</option>
+                                <option value="اصفهان">اصفهان</option>
+                                <option value="شیراز">شیراز</option>
+                                <option value="تبریز">تبریز</option>
+                                <option value="مشهد">مشهد</option>
+                                <option value="یزد">یزد</option>
+                                <option value="کاشان">کاشان</option>
+                                <option value="قم">قم</option>
+                                <option value="کرج">کرج</option>
+                                <option value="اهواز">اهواز</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label" id="destinationLabel">مقصد</label>
+                            <select class="form-select form-select-sm" id="destinationSelect">
+                                <option value="" id="selectDestinationOption">انتخاب کنید</option>
+                                <option value="تهران">تهران</option>
+                                <option value="اصفهان">اصفهان</option>
+                                <option value="شیراز">شیراز</option>
+                                <option value="تبریز">تبریز</option>
+                                <option value="مشهد">مشهد</option>
+                                <option value="یزد">یزد</option>
+                                <option value="کاشان">کاشان</option>
+                                <option value="قم">قم</option>
+                                <option value="کرج">کرج</option>
+                                <option value="اهواز">اهواز</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary btn-sm w-100 mt-2" onclick="searchRoute()" id="searchRouteBtn">
+                        <i class="fas fa-search me-1"></i>
+                        <span>جستجو</span>
+                    </button>
+                </div>
+                
+                <!-- Route Results -->
+                <div id="routeResults">
+                    <!-- Sample routes -->
+                    <div class="route-item" onclick="showRoute(1)">
+                        <h6>تهران → اصفهان</h6>
+                        <p class="text-muted mb-2" id="route1Desc">مسیر مستقیم با توقف در کاشان</p>
+                        <div class="route-stats">
+                            <div class="route-stat">
+                                <small id="distanceLabel1">فاصله</small>
+                                <div>450 کیلومتر</div>
+                            </div>
+                            <div class="route-stat">
+                                <small id="timeLabel1">زمان</small>
+                                <div>5.5 ساعت</div>
+                            </div>
+                            <div class="route-stat">
+                                <small id="costLabel1">هزینه</small>
+                                <div>225 هزار</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="route-item" onclick="showRoute(2)">
+                        <h6>اصفهان → شیراز</h6>
+                        <p class="text-muted mb-2" id="route2Desc">مسیر زیبا با جاذبه‌های تاریخی</p>
+                        <div class="route-stats">
+                            <div class="route-stat">
+                                <small id="distanceLabel2">فاصله</small>
+                                <div>480 کیلومتر</div>
+                            </div>
+                            <div class="route-stat">
+                                <small id="timeLabel2">زمان</small>
+                                <div>6 ساعت</div>
+                            </div>
+                            <div class="route-stat">
+                                <small id="costLabel2">هزینه</small>
+                                <div>240 هزار</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Attractions List -->
+                <div class="mt-4">
+                    <h6 class="mb-3">
+                        <i class="fas fa-star me-2"></i>
+                        <span id="routeAttractionsTitle">جاذبه‌های مسیر</span>
+                    </h6>
+                    <div id="attractionsList">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-map-marker-alt text-warning me-2"></i>
+                            <div>
+                                <small class="fw-bold">میدان امام</small>
+                                <br>
+                                <small class="text-muted" id="attraction1Info">اصفهان - امتیاز: 4.8</small>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-map-marker-alt text-warning me-2"></i>
+                            <div>
+                                <small class="fw-bold">تخت جمشید</small>
+                                <br>
+                                <small class="text-muted" id="attraction2Info">شیراز - امتیاز: 4.9</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+    let map;
+    let currentRoute = null;
+    let markers = [];
+    let routeLayer = null;
+    
+    // Initialize map
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeMap();
+        loadRouteFromURL();
+        updateMapLanguage();
+    });
+    
+    function initializeMap() {
+        // Create map centered on Iran
+        map = L.map('map').setView([32.4279, 53.6880], 6);
+        
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+        
+        // Add satellite tiles option
+        const satelliteTiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: '© Esri'
+        });
+        
+        // Map type selector
+        document.getElementById('mapType').addEventListener('change', function() {
+            map.removeLayer(map._tileLayer);
+            
+            switch(this.value) {
+                case 'satellite':
+                    satelliteTiles.addTo(map);
+                    break;
+                case 'terrain':
+                    L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                        attribution: '© OpenTopoMap'
+                    }).addTo(map);
+                    break;
+                default:
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '© OpenStreetMap contributors'
+                    }).addTo(map);
+            }
+        });
+    }
+    
+    function loadRouteFromURL() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const origin = urlParams.get('origin');
+        const destination = urlParams.get('destination');
+        
+        if (origin && destination) {
+            document.getElementById('originSelect').value = origin;
+            document.getElementById('destinationSelect').value = destination;
+            searchRoute();
+        }
+    }
+    
+    function searchRoute() {
+        const origin = document.getElementById('originSelect').value;
+        const destination = document.getElementById('destinationSelect').value;
+        const currentLanguage = localStorage.getItem('language') || 'fa';
+        
+        if (!origin || !destination) {
+            const alertText = currentLanguage === 'fa' ? 
+                'لطفاً مبدا و مقصد را انتخاب کنید' : 
+                'Please select origin and destination';
+            alert(alertText);
+            return;
+        }
+        
+        // Clear previous route
+        clearMap();
+        
+        // Show loading
+        const loadingText = currentLanguage === 'fa' ? 'در حال جستجوی مسیر...' : 'Searching for route...';
+        document.getElementById('routeResults').innerHTML = `
+            <div class="text-center">
+                <div class="loading"></div>
+                <p class="mt-3">${loadingText}</p>
+            </div>
+        `;
+        
+        // Get route from API
+        const params = new URLSearchParams({
+            origin: origin,
+            destination: destination,
+            include_attractions: 'true',
+            lang: currentLanguage
+        });
+        
+        fetch(`/api/map/route?${params}`)
+        .then(response => response.json())
+        .then(data => {
+            displayRouteOnMap(data);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            // Fallback to sample data
+            displaySampleRoute(origin, destination);
+        });
+    }
+    
+    function displayRouteOnMap(data) {
+        const origin = data.origin.name;
+        const destination = data.destination.name;
+        const originCoords = data.origin.coordinates;
+        const destCoords = data.destination.coordinates;
+        const routeInfo = data.route;
+        const attractions = data.attractions || [];
+        
+        // Clear previous route
+        clearMap();
+        
+        // Add origin marker
+        const originMarker = L.marker(originCoords, {
+            icon: L.divIcon({
+                className: 'custom-marker',
+                html: '<div style="background: #10b981; color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-weight: bold;">م</div>',
+                iconSize: [30, 30]
+            })
+        }).addTo(map);
+        
+        // Add destination marker
+        const destMarker = L.marker(destCoords, {
+            icon: L.divIcon({
+                className: 'custom-marker',
+                html: '<div style="background: #ef4444; color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-weight: bold;">م</div>',
+                iconSize: [30, 30]
+            })
+        }).addTo(map);
+        
+        markers.push(originMarker, destMarker);
+        
+        // Add route line
+        routeLayer = L.polyline(routeInfo.coordinates, {
+            color: '#3b82f6',
+            weight: 4,
+            opacity: 0.8
+        }).addTo(map);
+        
+        // Add attraction markers
+        attractions.forEach(attraction => {
+            const marker = L.marker([attraction.lat, attraction.lng], {
+                icon: L.divIcon({
+                    className: 'attraction-marker',
+                    html: '<i class="fas fa-star" style="color: #f59e0b;"></i>',
+                    iconSize: [30, 30]
+                })
+            }).addTo(map);
+            
+            const currentLanguage = localStorage.getItem('language') || 'fa';
+            const ratingText = currentLanguage === 'fa' ? 'امتیاز' : 'Rating';
+            
+            marker.bindPopup(`
+                <b>${attraction.name}</b><br>
+                <small>${attraction.description}</small><br>
+                <small>${ratingText}: ${attraction.rating}</small>
+            `);
+            
+            markers.push(marker);
+        });
+        
+        // Fit map to show all markers
+        const allCoords = [originCoords, destCoords, ...attractions.map(a => [a.lat, a.lng])];
+        const bounds = L.latLngBounds(allCoords);
+        map.fitBounds(bounds, { padding: [20, 20] });
+        
+        // Add popups
+        const currentLanguage = localStorage.getItem('language') || 'fa';
+        const originText = currentLanguage === 'fa' ? 'مبدا' : 'Origin';
+        const destinationText = currentLanguage === 'fa' ? 'مقصد' : 'Destination';
+        
+        originMarker.bindPopup(`<b>${originText}:</b> ${origin}`);
+        destMarker.bindPopup(`<b>${destinationText}:</b> ${destination}`);
+        
+        // Update route results
+        updateRouteResultsFromData(origin, destination, routeInfo);
+        
+        // Update attractions list
+        updateAttractionsList(attractions);
+    }
+    
+    function updateRouteResultsFromData(origin, destination, routeInfo) {
+        const currentLanguage = localStorage.getItem('language') || 'fa';
+        const directRouteText = currentLanguage === 'fa' ? 'مسیر مستقیم' : 'Direct route';
+        
+        const routes = [
+            {
+                origin: origin,
+                destination: destination,
+                distance: routeInfo.distance,
+                duration: routeInfo.duration,
+                cost: routeInfo.cost,
+                description: directRouteText
+            }
+        ];
+        
+        updateRouteResultsList(routes);
+    }
+    
+    function displaySampleRoute(origin, destination) {
+        // Sample route data for demonstration
+        const currentLanguage = localStorage.getItem('language') || 'fa';
+        const directRouteText = currentLanguage === 'fa' ? 'مسیر مستقیم' : 'Direct route';
+        const beautifulRouteText = currentLanguage === 'fa' ? 'مسیر زیبا با جاذبه‌های تاریخی' : 'Beautiful route with historical attractions';
+        
+        const sampleRoutes = [
+            {
+                origin: origin,
+                destination: destination,
+                distance: 450,
+                duration: 5.5,
+                cost: 225000,
+                description: directRouteText
+            },
+            {
+                origin: origin,
+                destination: destination,
+                distance: 520,
+                duration: 6.5,
+                cost: 260000,
+                description: beautifulRouteText
+            }
+        ];
+        
+        updateRouteResultsList(sampleRoutes);
+    }
+    
+    function updateRouteResults(origin, destination, routeCoords) {
+        // Calculate distance
+        const distance = calculateDistance(routeCoords[0], routeCoords[1]);
+        const duration = distance / 80; // Assuming 80 km/h average speed
+        const cost = distance * 500; // Assuming 500 tomans per km
+        
+        const currentLanguage = localStorage.getItem('language') || 'fa';
+        const directRouteText = currentLanguage === 'fa' ? 'مسیر مستقیم' : 'Direct route';
+        
+        const routes = [
+            {
+                origin: origin,
+                destination: destination,
+                distance: Math.round(distance),
+                duration: Math.round(duration * 10) / 10,
+                cost: Math.round(cost / 1000),
+                description: directRouteText
+            }
+        ];
+        
+        updateRouteResultsList(routes);
+    }
+    
+    function updateRouteResultsList(routes) {
+        const resultsDiv = document.getElementById('routeResults');
+        const currentLanguage = localStorage.getItem('language') || 'fa';
+        
+        let html = '';
+        routes.forEach((route, index) => {
+            const distanceText = currentLanguage === 'fa' ? 'کیلومتر' : 'km';
+            const timeText = currentLanguage === 'fa' ? 'ساعت' : 'hours';
+            const costText = currentLanguage === 'fa' ? 'هزار' : 'k';
+            
+            html += `
+                <div class="route-item" onclick="showRoute(${index + 1})">
+                    <h6>${route.origin} → ${route.destination}</h6>
+                    <p class="text-muted mb-2">${route.description}</p>
+                    <div class="route-stats">
+                        <div class="route-stat">
+                            <small>${currentLanguage === 'fa' ? 'فاصله' : 'Distance'}</small>
+                            <div>${route.distance} ${distanceText}</div>
+                        </div>
+                        <div class="route-stat">
+                            <small>${currentLanguage === 'fa' ? 'زمان' : 'Time'}</small>
+                            <div>${route.duration} ${timeText}</div>
+                        </div>
+                        <div class="route-stat">
+                            <small>${currentLanguage === 'fa' ? 'هزینه' : 'Cost'}</small>
+                            <div>${route.cost} ${costText}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        resultsDiv.innerHTML = html;
+    }
+    
+
+    
+    function updateAttractionsList(attractions) {
+        const listDiv = document.getElementById('attractionsList');
+        const currentLanguage = localStorage.getItem('language') || 'fa';
+        const ratingText = currentLanguage === 'fa' ? 'امتیاز' : 'Rating';
+        
+        if (!attractions || attractions.length === 0) {
+            const noAttractionsText = currentLanguage === 'fa' ? 'جاذبه‌ای یافت نشد' : 'No attractions found';
+            listDiv.innerHTML = `<p class="text-muted">${noAttractionsText}</p>`;
+            return;
+        }
+        
+        let html = '';
+        attractions.forEach(attraction => {
+            html += `
+                <div class="d-flex align-items-center mb-2">
+                    <i class="fas fa-map-marker-alt text-warning me-2"></i>
+                    <div>
+                        <small class="fw-bold">${attraction.name}</small>
+                        <br>
+                        <small class="text-muted">${attraction.description} - ${ratingText}: ${attraction.rating}</small>
+                    </div>
+                </div>
+            `;
+        });
+        
+        listDiv.innerHTML = html;
+    }
+    
+    function showRoute(routeId) {
+        // Highlight selected route
+        document.querySelectorAll('.route-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        event.target.closest('.route-item').classList.add('active');
+        
+        // TODO: Show detailed route information
+        console.log('Showing route:', routeId);
+    }
+    
+    function clearMap() {
+        // Remove all markers
+        markers.forEach(marker => map.removeLayer(marker));
+        markers = [];
+        
+        // Remove route layer
+        if (routeLayer) {
+            map.removeLayer(routeLayer);
+            routeLayer = null;
+        }
+    }
+    
+    function calculateDistance(coord1, coord2) {
+        // Haversine formula for distance calculation
+        const R = 6371; // Earth's radius in km
+        const dLat = (coord2[0] - coord1[0]) * Math.PI / 180;
+        const dLon = (coord2[1] - coord1[1]) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(coord1[0] * Math.PI / 180) * Math.cos(coord2[0] * Math.PI / 180) *
+                  Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c;
+    }
+    
+    function downloadMap() {
+        const currentLanguage = localStorage.getItem('language') || 'fa';
+        const message = currentLanguage === 'fa' ? 
+            'قابلیت دانلود نقشه در حال توسعه است...' : 
+            'Map download feature is under development...';
+        alert(message);
+    }
+    
+    // Language management for map
+    function getLanguageTexts(lang) {
+        return {
+            'fa': {
+                'mapSettingsTitle': 'تنظیمات نقشه',
+                'mapTypeLabel': 'نوع نقشه',
+                'satelliteOption': 'ماهواره‌ای',
+                'terrainOption': 'توپوگرافی',
+                'displayLabel': 'نمایش',
+                'attractionsLabel': 'جاذبه‌ها',
+                'hotelsLabel': 'هتل‌ها',
+                'restaurantsLabel': 'رستوران‌ها',
+                'gasStationsLabel': 'پمپ بنزین',
+                'downloadMapBtn': 'دانلود نقشه',
+                'legendTitle': 'راهنما',
+                'originLegend': 'مبدا',
+                'destinationLegend': 'مقصد',
+                'routeLegend': 'مسیر',
+                'attractionLegend': 'جاذبه',
+                'suggestedRoutesTitle': 'مسیرهای پیشنهادی',
+                'originLabel': 'مبدا',
+                'destinationLabel': 'مقصد',
+                'selectOriginOption': 'انتخاب کنید',
+                'selectDestinationOption': 'انتخاب کنید',
+                'searchRouteBtn': 'جستجو',
+                'route1Desc': 'مسیر مستقیم با توقف در کاشان',
+                'route2Desc': 'مسیر زیبا با جاذبه‌های تاریخی',
+                'distanceLabel1': 'فاصله',
+                'timeLabel1': 'زمان',
+                'costLabel1': 'هزینه',
+                'distanceLabel2': 'فاصله',
+                'timeLabel2': 'زمان',
+                'costLabel2': 'هزینه',
+                'routeAttractionsTitle': 'جاذبه‌های مسیر',
+                'attraction1Info': 'اصفهان - امتیاز: 4.8',
+                'attraction2Info': 'شیراز - امتیاز: 4.9'
+            },
+            'en': {
+                'mapSettingsTitle': 'Map Settings',
+                'mapTypeLabel': 'Map Type',
+                'satelliteOption': 'Satellite',
+                'terrainOption': 'Terrain',
+                'displayLabel': 'Display',
+                'attractionsLabel': 'Attractions',
+                'hotelsLabel': 'Hotels',
+                'restaurantsLabel': 'Restaurants',
+                'gasStationsLabel': 'Gas Stations',
+                'downloadMapBtn': 'Download Map',
+                'legendTitle': 'Legend',
+                'originLegend': 'Origin',
+                'destinationLegend': 'Destination',
+                'routeLegend': 'Route',
+                'attractionLegend': 'Attraction',
+                'suggestedRoutesTitle': 'Suggested Routes',
+                'originLabel': 'Origin',
+                'destinationLabel': 'Destination',
+                'selectOriginOption': 'Select',
+                'selectDestinationOption': 'Select',
+                'searchRouteBtn': 'Search',
+                'route1Desc': 'Direct route with stop in Kashan',
+                'route2Desc': 'Beautiful route with historical attractions',
+                'distanceLabel1': 'Distance',
+                'timeLabel1': 'Time',
+                'costLabel1': 'Cost',
+                'distanceLabel2': 'Distance',
+                'timeLabel2': 'Time',
+                'costLabel2': 'Cost',
+                'routeAttractionsTitle': 'Route Attractions',
+                'attraction1Info': 'Isfahan - Rating: 4.8',
+                'attraction2Info': 'Shiraz - Rating: 4.9'
+            }
+        }[lang];
+    }
+    
+    function updateMapLanguage() {
+        const currentLanguage = localStorage.getItem('language') || 'en';
+        const texts = getLanguageTexts(currentLanguage);
+        
+        // Update map controls
+        document.getElementById('mapSettingsTitle').textContent = texts.mapSettingsTitle;
+        document.getElementById('mapTypeLabel').textContent = texts.mapTypeLabel;
+        document.getElementById('satelliteOption').textContent = texts.satelliteOption;
+        document.getElementById('terrainOption').textContent = texts.terrainOption;
+        document.getElementById('displayLabel').textContent = texts.displayLabel;
+        document.getElementById('attractionsLabel').textContent = texts.attractionsLabel;
+        document.getElementById('hotelsLabel').textContent = texts.hotelsLabel;
+        document.getElementById('restaurantsLabel').textContent = texts.restaurantsLabel;
+        document.getElementById('gasStationsLabel').textContent = texts.gasStationsLabel;
+        document.querySelector('#downloadMapBtn span').textContent = texts.downloadMapBtn;
+        
+        // Update legend
+        document.getElementById('legendTitle').textContent = texts.legendTitle;
+        document.getElementById('originLegend').textContent = texts.originLegend;
+        document.getElementById('destinationLegend').textContent = texts.destinationLegend;
+        document.getElementById('routeLegend').textContent = texts.routeLegend;
+        document.getElementById('attractionLegend').textContent = texts.attractionLegend;
+        
+        // Update sidebar
+        document.getElementById('suggestedRoutesTitle').textContent = texts.suggestedRoutesTitle;
+        document.getElementById('originLabel').textContent = texts.originLabel;
+        document.getElementById('destinationLabel').textContent = texts.destinationLabel;
+        document.getElementById('selectOriginOption').textContent = texts.selectOriginOption;
+        document.getElementById('selectDestinationOption').textContent = texts.selectDestinationOption;
+        document.querySelector('#searchRouteBtn span').textContent = texts.searchRouteBtn;
+        
+        // Update sample routes
+        document.getElementById('route1Desc').textContent = texts.route1Desc;
+        document.getElementById('route2Desc').textContent = texts.route2Desc;
+        document.getElementById('distanceLabel1').textContent = texts.distanceLabel1;
+        document.getElementById('timeLabel1').textContent = texts.timeLabel1;
+        document.getElementById('costLabel1').textContent = texts.costLabel1;
+        document.getElementById('distanceLabel2').textContent = texts.distanceLabel2;
+        document.getElementById('timeLabel2').textContent = texts.timeLabel2;
+        document.getElementById('costLabel2').textContent = texts.costLabel2;
+        
+        // Update attractions
+        document.getElementById('routeAttractionsTitle').textContent = texts.routeAttractionsTitle;
+        document.getElementById('attraction1Info').textContent = texts.attraction1Info;
+        document.getElementById('attraction2Info').textContent = texts.attraction2Info;
+    }
+    
+    // Listen for language changes
+    window.addEventListener('languageChanged', function(e) {
+        updateMapLanguage();
+    });
+    
+    // Filter controls
+    document.getElementById('showAttractions').addEventListener('change', function() {
+        // TODO: Toggle attraction markers
+    });
+    
+    document.getElementById('showHotels').addEventListener('change', function() {
+        // TODO: Toggle hotel markers
+    });
+    
+    document.getElementById('showRestaurants').addEventListener('change', function() {
+        // TODO: Toggle restaurant markers
+    });
+    
+    document.getElementById('showGasStations').addEventListener('change', function() {
+        // TODO: Toggle gas station markers
+    });
+</script>
+{% endblock %} 

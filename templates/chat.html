@@ -1,0 +1,1196 @@
+{% extends "base.html" %}
+
+{% block title %}Chat - AI Travel Recommender Agent{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chat-page {
+        height: calc(100vh - 160px);
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .chat-header {
+        background: var(--primary-color);
+        color: white;
+        padding: 15px 20px;
+        border-radius: 15px 15px 0 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .chat-status-indicator {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .status-dot {
+        width: 8px;
+        height: 8px;
+        background: #10b981;
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
+    }
+    
+    .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        background: #f8fafc;
+        border-left: 1px solid #e2e8f0;
+        border-right: 1px solid #e2e8f0;
+    }
+    
+    .message {
+        margin-bottom: 15px;
+        display: flex;
+        align-items: flex-end;
+    }
+    
+    .message.user {
+        justify-content: flex-end;
+    }
+    
+    .message.bot {
+        justify-content: flex-start;
+    }
+    
+    .message-content {
+        max-width: 70%;
+        padding: 12px 16px;
+        border-radius: 18px;
+        position: relative;
+        word-wrap: break-word;
+    }
+    
+    .message.user .message-content {
+        background: var(--primary-color);
+        color: white;
+        border-bottom-right-radius: 5px;
+    }
+    
+    .message.bot .message-content {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-bottom-left-radius: 5px;
+    }
+    
+    .message-time {
+        font-size: 0.75rem;
+        opacity: 0.7;
+        margin-top: 5px;
+    }
+    
+    .message.user .message-time {
+        text-align: left;
+    }
+    
+    .message.bot .message-time {
+        text-align: right;
+    }
+    
+    .sentiment-indicator {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        color: white;
+    }
+    
+    .sentiment-positive {
+        background: #10b981;
+    }
+    
+    .sentiment-negative {
+        background: #ef4444;
+    }
+    
+    .sentiment-neutral {
+        background: #6b7280;
+    }
+    
+    .follow-up-questions {
+        margin-top: 10px;
+        padding: 10px;
+        background: #f0f9ff;
+        border-radius: 8px;
+        border-left: 3px solid #0ea5e9;
+    }
+    
+    .follow-up-questions h6 {
+        color: #0369a1;
+        margin-bottom: 8px;
+        font-size: 0.9rem;
+    }
+    
+    .follow-up-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .follow-up-list li {
+        margin-bottom: 5px;
+    }
+    
+    .follow-up-list button {
+        background: none;
+        border: none;
+        color: #0ea5e9;
+        text-decoration: underline;
+        cursor: pointer;
+        font-size: 0.85rem;
+        padding: 2px 0;
+    }
+    
+    .follow-up-list button:hover {
+        color: #0369a1;
+    }
+    
+    .conversation-flow-indicator {
+        background: #fef3c7;
+        border: 1px solid #f59e0b;
+        border-radius: 8px;
+        padding: 8px 12px;
+        margin: 10px 0;
+        font-size: 0.85rem;
+        color: #92400e;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .flow-icon {
+        width: 16px;
+        height: 16px;
+    }
+    
+    .chat-input {
+        background: white;
+        padding: 20px;
+        border-radius: 0 0 15px 15px;
+        border: 1px solid #e2e8f0;
+        border-top: none;
+    }
+    
+    .input-group {
+        position: relative;
+    }
+    
+    .form-control {
+        border-radius: 25px;
+        padding: 12px 50px 12px 20px;
+        border: 2px solid #e2e8f0;
+        resize: none;
+    }
+    
+    .form-control:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    
+    .send-btn {
+        position: absolute;
+        right: 5px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: var(--primary-color);
+        border: none;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+    }
+    
+    .send-btn:hover {
+        background: #1d4ed8;
+        transform: translateY(-50%) scale(1.1);
+    }
+    
+    .send-btn:disabled {
+        background: #94a3b8;
+        cursor: not-allowed;
+        transform: translateY(-50%) scale(1);
+    }
+    
+    .typing-indicator {
+        display: none;
+        padding: 12px 16px;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 18px;
+        border-bottom-left-radius: 5px;
+        max-width: 70%;
+        margin-bottom: 15px;
+    }
+    
+    .typing-dots {
+        display: flex;
+        gap: 4px;
+    }
+    
+    .typing-dot {
+        width: 8px;
+        height: 8px;
+        background: #94a3b8;
+        border-radius: 50%;
+        animation: typing 1.4s infinite ease-in-out;
+    }
+    
+    .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+    .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+    
+    @keyframes typing {
+        0%, 80%, 100% {
+            transform: scale(0.8);
+            opacity: 0.5;
+        }
+        40% {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+    
+    .suggestions {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+    }
+    
+    .suggestion-btn {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 20px;
+        padding: 8px 16px;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+    }
+    
+    .suggestion-btn:hover {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+    
+    .route-info {
+        background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+        border: 1px solid #0ea5e9;
+        border-radius: 10px;
+        padding: 15px;
+        margin: 10px 0;
+    }
+    
+    .route-info h6 {
+        color: #0369a1;
+        margin-bottom: 10px;
+    }
+    
+    .route-info .row {
+        margin: 0;
+    }
+    
+    .route-info .col-3 {
+        padding: 5px;
+        text-align: center;
+    }
+    
+    .route-info .col-3 small {
+        display: block;
+        color: #64748b;
+        font-size: 0.8rem;
+    }
+    
+    .route-info .col-3 div {
+        font-weight: 600;
+        color: #0f172a;
+    }
+    
+    .quick-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 10px;
+        flex-wrap: wrap;
+    }
+    
+    .quick-action-btn {
+        background: #f1f5f9;
+        border: 1px solid #cbd5e1;
+        border-radius: 15px;
+        padding: 6px 12px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        color: #475569;
+    }
+    
+    .quick-action-btn:hover {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+    
+    .feedback-section {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 15px 0;
+    }
+    
+    .feedback-buttons {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+    }
+    
+    .feedback-btn {
+        padding: 8px 16px;
+        border: 1px solid #e2e8f0;
+        border-radius: 20px;
+        background: white;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 0.9rem;
+    }
+    
+    .feedback-btn:hover {
+        background: #f1f5f9;
+    }
+    
+    .feedback-btn.active {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Chat Interface -->
+        <div class="col-md-8 mx-auto">
+            <div class="card chat-page">
+                <!-- Chat Header -->
+                <div class="chat-header">
+                    <div class="d-flex align-items-center">
+                        <div class="avatar me-3">
+                            <i class="fas fa-robot fa-2x"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0" id="chatTitle">دستیار سفر هوشمند</h6>
+                            <div class="chat-status-indicator">
+                                <div class="status-dot"></div>
+                                <small id="chatStatus">آنلاین</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chat-actions">
+                        <button class="btn btn-sm btn-outline-light me-2" onclick="showAnalytics()" title="تحلیل چت" id="analyticsBtn">
+                            <i class="fas fa-chart-line"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-light me-2" onclick="clearChat()" title="پاک کردن چت" id="clearChatBtn">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-light" onclick="showChatHistory()" title="تاریخچه چت" id="historyBtn">
+                            <i class="fas fa-history"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Chat Messages -->
+                <div class="chat-messages" id="chatMessages">
+                    <!-- Welcome message -->
+                    <div class="message bot">
+                        <div class="message-content">
+                            <div id="welcomeMessage">
+                                سلام! 👋 من دستیار سفر شما هستم. می‌توانم در موارد زیر کمک کنم:
+                                <br><br>
+                                🗺️ <strong>پیشنهاد مسیر سفر</strong><br>
+                                💰 <strong>تخمین هزینه</strong><br>
+                                ⏱️ <strong>برنامه‌ریزی زمانی</strong><br>
+                                🏛️ <strong>معرفی جاذبه‌ها</strong><br>
+                                <br>
+                                لطفاً سوال خود را مطرح کنید یا از پیشنهادات زیر استفاده کنید.
+                            </div>
+                            <div class="message-time" id="welcomeTime">اکنون</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Suggestions -->
+                    <div class="suggestions" id="suggestions">
+                        <button class="suggestion-btn" onclick="sendSuggestion('مسیر از تهران به اصفهان')" id="suggestion1">
+                            مسیر از تهران به اصفهان
+                        </button>
+                        <button class="suggestion-btn" onclick="sendSuggestion('بودجه 2 میلیون تومان')" id="suggestion2">
+                            بودجه 2 میلیون تومان
+                        </button>
+                        <button class="suggestion-btn" onclick="sendSuggestion('سفر 3 روزه')" id="suggestion3">
+                            سفر 3 روزه
+                        </button>
+                        <button class="suggestion-btn" onclick="sendSuggestion('جاذبه‌های شیراز')" id="suggestion4">
+                            جاذبه‌های شیراز
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Typing Indicator -->
+                <div class="typing-indicator" id="typingIndicator">
+                    <div class="typing-dots">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                </div>
+                
+                <!-- Chat Input -->
+                <div class="chat-input">
+                    <form id="chatForm" onsubmit="sendMessage(event)">
+                        <div class="input-group">
+                            <textarea 
+                                class="form-control" 
+                                id="messageInput" 
+                                placeholder="پیام خود را بنویسید..."
+                                rows="1"
+                                onkeydown="handleKeyDown(event)"
+                                oninput="autoResize(this)"
+                            ></textarea>
+                            <button type="submit" class="send-btn" id="sendBtn" disabled>
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sidebar -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <span id="helpTitle">راهنما</span>
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h6 id="sampleQuestionsTitle">نمونه سوالات:</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <small class="text-muted" id="sampleQuestion1">• مسیر از تهران به شیراز چقدر طول می‌کشد؟</small>
+                            </li>
+                            <li class="mb-2">
+                                <small class="text-muted" id="sampleQuestion2">• با بودجه 3 میلیون چه مسیری پیشنهاد می‌دهید؟</small>
+                            </li>
+                            <li class="mb-2">
+                                <small class="text-muted" id="sampleQuestion3">• جاذبه‌های اصفهان کدام‌اند؟</small>
+                            </li>
+                            <li class="mb-2">
+                                <small class="text-muted" id="sampleQuestion4">• مسیر ارزان و سریع از تهران به مشهد</small>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6 id="preferencesTitle">ترجیحات:</h6>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="prefFast">
+                            <label class="form-check-label" for="prefFast" id="prefFastLabel">
+                                <small>سریع‌ترین مسیر</small>
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="prefCheap">
+                            <label class="form-check-label" for="prefCheap" id="prefCheapLabel">
+                                <small>ارزان‌ترین</small>
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="prefScenic">
+                            <label class="form-check-label" for="prefScenic" id="prefScenicLabel">
+                                <small>زیباترین مسیر</small>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="feedback-section">
+                        <h6 id="feedbackTitle">بازخورد:</h6>
+                        <div class="feedback-buttons">
+                            <button class="feedback-btn" onclick="submitFeedback(1)" id="feedbackGood">
+                                😊 <span id="feedbackGoodText">خوب</span>
+                            </button>
+                            <button class="feedback-btn" onclick="submitFeedback(0.5)" id="feedbackNeutral">
+                                😐 <span id="feedbackNeutralText">متوسط</span>
+                            </button>
+                            <button class="feedback-btn" onclick="submitFeedback(0)" id="feedbackBad">
+                                😞 <span id="feedbackBadText">بد</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center">
+                        <button class="btn btn-sm btn-outline-primary" onclick="exportChat()" id="exportChatBtn">
+                            <i class="fas fa-download me-1"></i>
+                            <span>ذخیره چت</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Analytics Modal -->
+<div class="modal fade" id="analyticsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="analyticsModalTitle">تحلیل چت</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="analyticsModalBody">
+                <!-- Analytics content will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let chatHistory = [];
+    let isTyping = false;
+    let currentConversationFlow = 'initial';
+    
+    // Initialize chat
+    document.addEventListener('DOMContentLoaded', function() {
+        loadChatHistory();
+        scrollToBottom();
+        updateChatLanguage();
+    });
+    
+    function sendMessage(event) {
+        event.preventDefault();
+        
+        const messageInput = document.getElementById('messageInput');
+        const message = messageInput.value.trim();
+        
+        if (!message) return;
+        
+        // Add user message
+        addMessage(message, 'user');
+        messageInput.value = '';
+        autoResize(messageInput);
+        updateSendButton();
+        
+        // Show typing indicator
+        showTypingIndicator();
+        
+        // Get current language
+        const currentLanguage = localStorage.getItem('language') || 'fa';
+        
+        // Send to API
+        fetch('/chat/message', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                message: message,
+                user_id: 1, // TODO: Get from session
+                lang: currentLanguage
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideTypingIndicator();
+            addMessage(data.response, 'bot', data.route_info, data);
+            
+            // Update conversation flow
+            if (data.conversation_flow) {
+                currentConversationFlow = data.conversation_flow;
+                updateConversationFlowIndicator();
+            }
+            
+            // Update suggestions based on response
+            updateSuggestions(data.intent, data.suggestions);
+        })
+        .catch(error => {
+            hideTypingIndicator();
+            const errorMessage = currentLanguage === 'fa' ? 
+                'متأسفانه خطایی رخ داد. لطفاً دوباره تلاش کنید.' : 
+                'Sorry, an error occurred. Please try again.';
+            addMessage(errorMessage, 'bot');
+        });
+    }
+    
+    function addMessage(content, sender, routeInfo = null, responseData = null) {
+        const chatMessages = document.getElementById('chatMessages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${sender}`;
+        
+        const currentLanguage = localStorage.getItem('language') || 'fa';
+        const time = new Date().toLocaleTimeString(currentLanguage === 'fa' ? 'fa-IR' : 'en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+        
+        let messageContent = `
+            <div class="message-content">
+                <div>${content}</div>
+                <div class="message-time">${time}</div>
+            </div>
+        `;
+        
+        // Add sentiment indicator for bot messages
+        if (sender === 'bot' && responseData && responseData.sentiment) {
+            const sentimentClass = `sentiment-${responseData.sentiment}`;
+            const sentimentIcon = responseData.sentiment === 'positive' ? '😊' : 
+                                responseData.sentiment === 'negative' ? '😞' : '😐';
+            messageContent = `
+                <div class="message-content">
+                    <div class="sentiment-indicator ${sentimentClass}">${sentimentIcon}</div>
+                    <div>${content}</div>
+                    <div class="message-time">${time}</div>
+                </div>
+            `;
+        }
+        
+        // Add route info if available
+        if (routeInfo && routeInfo.origin && routeInfo.destination) {
+            const routeInfoTitle = currentLanguage === 'fa' ? 'اطلاعات مسیر' : 'Route Information';
+            const originText = currentLanguage === 'fa' ? 'مبدا' : 'Origin';
+            const destinationText = currentLanguage === 'fa' ? 'مقصد' : 'Destination';
+            const budgetText = currentLanguage === 'fa' ? 'بودجه' : 'Budget';
+            const durationText = currentLanguage === 'fa' ? 'مدت' : 'Duration';
+            const unknownText = currentLanguage === 'fa' ? 'نامشخص' : 'Unknown';
+            const dayText = currentLanguage === 'fa' ? 'روز' : 'days';
+            
+            messageContent = `
+                <div class="message-content">
+                    <div>${content}</div>
+                    <div class="route-info">
+                        <h6><i class="fas fa-route me-2"></i>${routeInfoTitle}</h6>
+                        <div class="row">
+                            <div class="col-3">
+                                <small>${originText}</small>
+                                <div>${routeInfo.origin}</div>
+                            </div>
+                            <div class="col-3">
+                                <small>${destinationText}</small>
+                                <div>${routeInfo.destination}</div>
+                            </div>
+                            <div class="col-3">
+                                <small>${budgetText}</small>
+                                <div>${routeInfo.budget || unknownText}</div>
+                            </div>
+                            <div class="col-3">
+                                <small>${durationText}</small>
+                                <div>${routeInfo.duration_days || unknownText} ${dayText}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="message-time">${time}</div>
+                </div>
+            `;
+        }
+        
+        // Add follow-up questions if available
+        if (sender === 'bot' && responseData && responseData.follow_up_questions && responseData.follow_up_questions.length > 0) {
+            const followUpTitle = currentLanguage === 'fa' ? 'سوالات بعدی:' : 'Follow-up questions:';
+            const followUpHtml = responseData.follow_up_questions.map(question => 
+                `<li><button onclick="sendSuggestion('${question}')">${question}</button></li>`
+            ).join('');
+            
+            messageContent += `
+                <div class="follow-up-questions">
+                    <h6><i class="fas fa-question-circle me-2"></i>${followUpTitle}</h6>
+                    <ul class="follow-up-list">
+                        ${followUpHtml}
+                    </ul>
+                </div>
+            `;
+        }
+        
+        // Add quick actions if available
+        if (sender === 'bot' && responseData && responseData.quick_actions && responseData.quick_actions.length > 0) {
+            const quickActionsHtml = responseData.quick_actions.map(action => 
+                `<button class="quick-action-btn" onclick="handleQuickAction('${action.type}', ${JSON.stringify(action.data)})">${action.text}</button>`
+            ).join('');
+            
+            messageContent += `
+                <div class="quick-actions">
+                    ${quickActionsHtml}
+                </div>
+            `;
+        }
+        
+        messageDiv.innerHTML = messageContent;
+        chatMessages.appendChild(messageDiv);
+        
+        // Add to history
+        chatHistory.push({
+            content: content,
+            sender: sender,
+            time: time,
+            routeInfo: routeInfo,
+            responseData: responseData
+        });
+        
+        scrollToBottom();
+    }
+    
+    function updateConversationFlowIndicator() {
+        const currentLanguage = localStorage.getItem('language') || 'fa';
+        const flowTexts = {
+            'fa': {
+                'initial': 'شروع گفتگو',
+                'route_planning': 'برنامه‌ریزی مسیر',
+                'budget_discussion': 'بحث بودجه'
+            },
+            'en': {
+                'initial': 'Initial conversation',
+                'route_planning': 'Route planning',
+                'budget_discussion': 'Budget discussion'
+            }
+        };
+        
+        const flowText = flowTexts[currentLanguage][currentConversationFlow] || currentConversationFlow;
+        const flowIcon = currentConversationFlow === 'route_planning' ? 'fas fa-route' : 
+                        currentConversationFlow === 'budget_discussion' ? 'fas fa-coins' : 'fas fa-comments';
+        
+        // Remove existing flow indicator
+        const existingIndicator = document.querySelector('.conversation-flow-indicator');
+        if (existingIndicator) {
+            existingIndicator.remove();
+        }
+        
+        // Add new flow indicator
+        const chatMessages = document.getElementById('chatMessages');
+        const flowDiv = document.createElement('div');
+        flowDiv.className = 'conversation-flow-indicator';
+        flowDiv.innerHTML = `
+            <i class="${flowIcon} flow-icon"></i>
+            <span>${flowText}</span>
+        `;
+        
+        chatMessages.appendChild(flowDiv);
+        scrollToBottom();
+    }
+    
+    function handleQuickAction(actionType, data) {
+        switch(actionType) {
+            case 'route_search':
+                // Navigate to map with route
+                window.location.href = `/map?origin=${data.origin}&destination=${data.destination}`;
+                break;
+            case 'view_map':
+                // Open map view
+                window.open(`/map?origin=${data.origin}&destination=${data.destination}`, '_blank');
+                break;
+            case 'budget_calculator':
+                // Show budget calculator
+                alert('محاسبه‌گر هزینه در حال توسعه است...');
+                break;
+            case 'attractions_list':
+                // Show attractions list
+                window.location.href = '/attractions';
+                break;
+        }
+    }
+    
+    function sendSuggestion(text) {
+        document.getElementById('messageInput').value = text;
+        sendMessage(new Event('submit'));
+    }
+    
+    function showTypingIndicator() {
+        isTyping = true;
+        document.getElementById('typingIndicator').style.display = 'block';
+        scrollToBottom();
+    }
+    
+    function hideTypingIndicator() {
+        isTyping = false;
+        document.getElementById('typingIndicator').style.display = 'none';
+    }
+    
+    function updateSuggestions(intent, newSuggestions = null) {
+        const suggestions = document.getElementById('suggestions');
+        const currentLanguage = localStorage.getItem('language') || 'fa';
+        
+        if (newSuggestions && newSuggestions.length > 0) {
+            suggestions.innerHTML = newSuggestions.map(suggestion => 
+                `<button class="suggestion-btn" onclick="sendSuggestion('${suggestion}')">${suggestion}</button>`
+            ).join('');
+            return;
+        }
+        
+        let suggestionsList = [];
+        
+        if (currentLanguage === 'fa') {
+            switch(intent) {
+                case 'route_request':
+                    suggestionsList = [
+                        'بودجه چقدر است؟',
+                        'چند روز سفر؟',
+                        'جاذبه‌های مسیر',
+                        'مسیر ارزان‌تر'
+                    ];
+                    break;
+                case 'budget_request':
+                    suggestionsList = [
+                        'مسیر از تهران به اصفهان',
+                        'سفر 2 روزه',
+                        'مسیر ارزان',
+                        'جاذبه‌های مقصد'
+                    ];
+                    break;
+                default:
+                    suggestionsList = [
+                        'مسیر از تهران به اصفهان',
+                        'بودجه 2 میلیون تومان',
+                        'سفر 3 روزه',
+                        'جاذبه‌های شیراز'
+                    ];
+            }
+        } else {
+            switch(intent) {
+                case 'route_request':
+                    suggestionsList = [
+                        'What is the budget?',
+                        'How many days?',
+                        'Attractions on route',
+                        'Cheaper route'
+                    ];
+                    break;
+                case 'budget_request':
+                    suggestionsList = [
+                        'Route from Tehran to Isfahan',
+                        '2-day trip',
+                        'Cheap route',
+                        'Destination attractions'
+                    ];
+                    break;
+                default:
+                    suggestionsList = [
+                        'Route from Tehran to Isfahan',
+                        'Budget 2 million toman',
+                        '3-day trip',
+                        'Shiraz attractions'
+                    ];
+            }
+        }
+        
+        suggestions.innerHTML = suggestionsList.map(suggestion => 
+            `<button class="suggestion-btn" onclick="sendSuggestion('${suggestion}')">${suggestion}</button>`
+        ).join('');
+    }
+    
+    function handleKeyDown(event) {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            sendMessage(event);
+        }
+    }
+    
+    function autoResize(textarea) {
+        textarea.style.height = 'auto';
+        textarea.style.height = textarea.scrollHeight + 'px';
+        updateSendButton();
+    }
+    
+    function updateSendButton() {
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        sendBtn.disabled = !messageInput.value.trim();
+    }
+    
+    function scrollToBottom() {
+        const chatMessages = document.getElementById('chatMessages');
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    
+    function clearChat() {
+        const currentLanguage = localStorage.getItem('language') || 'fa';
+        const confirmText = currentLanguage === 'fa' ? 
+            'آیا مطمئن هستید که می‌خواهید چت را پاک کنید؟' : 
+            'Are you sure you want to clear the chat?';
+        
+        if (confirm(confirmText)) {
+            document.getElementById('chatMessages').innerHTML = '';
+            chatHistory = [];
+            currentConversationFlow = 'initial';
+            
+            // Add welcome message back
+            const welcomeText = currentLanguage === 'fa' ? 
+                'سلام! 👋 من دستیار سفر شما هستم. چطور می‌تونم کمکتون کنم؟' : 
+                'Hello! 👋 I\'m your travel assistant. How can I help you?';
+            addMessage(welcomeText, 'bot');
+        }
+    }
+    
+    function showChatHistory() {
+        const currentLanguage = localStorage.getItem('language') || 'fa';
+        const message = currentLanguage === 'fa' ? 
+            'تاریخچه چت در حال توسعه است...' : 
+            'Chat history is under development...';
+        alert(message);
+    }
+    
+    function showAnalytics() {
+        const currentLanguage = localStorage.getItem('language') || 'fa';
+        const modalTitle = currentLanguage === 'fa' ? 'تحلیل چت' : 'Chat Analytics';
+        const loadingText = currentLanguage === 'fa' ? 'در حال بارگذاری...' : 'Loading...';
+        
+        document.getElementById('analyticsModalTitle').textContent = modalTitle;
+        document.getElementById('analyticsModalBody').innerHTML = `<p>${loadingText}</p>`;
+        
+        const modal = new bootstrap.Modal(document.getElementById('analyticsModal'));
+        modal.show();
+        
+        // Load analytics data
+        fetch('/chat/analytics/1')
+            .then(response => response.json())
+            .then(data => {
+                displayAnalytics(data, currentLanguage);
+            })
+            .catch(error => {
+                const errorText = currentLanguage === 'fa' ? 'خطا در بارگذاری تحلیل‌ها' : 'Error loading analytics';
+                document.getElementById('analyticsModalBody').innerHTML = `<p class="text-danger">${errorText}</p>`;
+            });
+    }
+    
+    function displayAnalytics(data, language) {
+        const texts = language === 'fa' ? {
+            'totalInteractions': 'کل تعاملات',
+            'engagementScore': 'امتیاز تعامل',
+            'preferredIntents': 'ترجیحات گفتگو',
+            'sentimentTrend': 'روند احساسات',
+            'conversationFlow': 'جریان گفتگو'
+        } : {
+            'totalInteractions': 'Total Interactions',
+            'engagementScore': 'Engagement Score',
+            'preferredIntents': 'Preferred Intents',
+            'sentimentTrend': 'Sentiment Trend',
+            'conversationFlow': 'Conversation Flow'
+        };
+        
+        const html = `
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h6>${texts.totalInteractions}</h6>
+                            <h3>${data.total_interactions}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h6>${texts.engagementScore}</h6>
+                            <h3>${Math.round(data.user_engagement_score * 100)}%</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <h6>${texts.conversationFlow}</h6>
+                            <p>${data.conversation_flow_pattern}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('analyticsModalBody').innerHTML = html;
+    }
+    
+    function submitFeedback(score) {
+        const currentLanguage = localStorage.getItem('language') || 'fa';
+        
+        // Update button states
+        document.querySelectorAll('.feedback-btn').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+        
+        // Send feedback to API
+        fetch('/chat/feedback/1', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                satisfaction: score,
+                message: 'User feedback'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            const message = currentLanguage === 'fa' ? 'بازخورد شما ثبت شد' : 'Your feedback has been recorded';
+            // You could show a toast notification here
+        })
+        .catch(error => {
+            console.error('Error submitting feedback:', error);
+        });
+    }
+    
+    function exportChat() {
+        const currentLanguage = localStorage.getItem('language') || 'fa';
+        const youText = currentLanguage === 'fa' ? 'شما' : 'You';
+        const botText = currentLanguage === 'fa' ? 'ربات' : 'Bot';
+        
+        const chatText = chatHistory.map(msg => 
+            `${msg.sender === 'user' ? youText : botText}: ${msg.content}`
+        ).join('\n\n');
+        
+        const blob = new Blob([chatText], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'chat-history.txt';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+    
+    function loadChatHistory() {
+        // TODO: Load from API
+        // For now, chat history is empty
+    }
+    
+    // Language management for chat
+    function getLanguageTexts(lang) {
+        return {
+            'fa': {
+                'chatTitle': 'دستیار سفر هوشمند',
+                'chatStatus': 'آنلاین',
+                'welcomeMessage': 'سلام! 👋 من دستیار سفر شما هستم. می‌توانم در موارد زیر کمک کنم:<br><br>🗺️ <strong>پیشنهاد مسیر سفر</strong><br>💰 <strong>تخمین هزینه</strong><br>⏱️ <strong>برنامه‌ریزی زمانی</strong><br>🏛️ <strong>معرفی جاذبه‌ها</strong><br><br>لطفاً سوال خود را مطرح کنید یا از پیشنهادات زیر استفاده کنید.',
+                'welcomeTime': 'اکنون',
+                'suggestion1': 'مسیر از تهران به اصفهان',
+                'suggestion2': 'بودجه 2 میلیون تومان',
+                'suggestion3': 'سفر 3 روزه',
+                'suggestion4': 'جاذبه‌های شیراز',
+                'helpTitle': 'راهنما',
+                'sampleQuestionsTitle': 'نمونه سوالات:',
+                'sampleQuestion1': '• مسیر از تهران به شیراز چقدر طول می‌کشد؟',
+                'sampleQuestion2': '• با بودجه 3 میلیون چه مسیری پیشنهاد می‌دهید؟',
+                'sampleQuestion3': '• جاذبه‌های اصفهان کدام‌اند؟',
+                'sampleQuestion4': '• مسیر ارزان و سریع از تهران به مشهد',
+                'preferencesTitle': 'ترجیحات:',
+                'prefFastLabel': 'سریع‌ترین مسیر',
+                'prefCheapLabel': 'ارزان‌ترین',
+                'prefScenicLabel': 'زیباترین مسیر',
+                'exportChatBtn': 'ذخیره چت',
+                'messagePlaceholder': 'پیام خود را بنویسید...',
+                'feedbackTitle': 'بازخورد:',
+                'feedbackGoodText': 'خوب',
+                'feedbackNeutralText': 'متوسط',
+                'feedbackBadText': 'بد'
+            },
+            'en': {
+                'chatTitle': 'Smart Travel Assistant',
+                'chatStatus': 'Online',
+                'welcomeMessage': 'Hello! 👋 I\'m your travel assistant. I can help you with:<br><br>🗺️ <strong>Travel route suggestions</strong><br>💰 <strong>Cost estimation</strong><br>⏱️ <strong>Time planning</strong><br>🏛️ <strong>Attraction information</strong><br><br>Please ask your question or use the suggestions below.',
+                'welcomeTime': 'Now',
+                'suggestion1': 'Route from Tehran to Isfahan',
+                'suggestion2': 'Budget 2 million toman',
+                'suggestion3': '3-day trip',
+                'suggestion4': 'Shiraz attractions',
+                'helpTitle': 'Help',
+                'sampleQuestionsTitle': 'Sample Questions:',
+                'sampleQuestion1': '• How long does the route from Tehran to Shiraz take?',
+                'sampleQuestion2': '• What route do you suggest with 3 million budget?',
+                'sampleQuestion3': '• What are the attractions in Isfahan?',
+                'sampleQuestion4': '• Cheap and fast route from Tehran to Mashhad',
+                'preferencesTitle': 'Preferences:',
+                'prefFastLabel': 'Fastest route',
+                'prefCheapLabel': 'Cheapest',
+                'prefScenicLabel': 'Most beautiful route',
+                'exportChatBtn': 'Save Chat',
+                'messagePlaceholder': 'Type your message...',
+                'feedbackTitle': 'Feedback:',
+                'feedbackGoodText': 'Good',
+                'feedbackNeutralText': 'Neutral',
+                'feedbackBadText': 'Bad'
+            }
+        }[lang];
+    }
+    
+    function updateChatLanguage() {
+        const currentLanguage = localStorage.getItem('language') || 'en';
+        const texts = getLanguageTexts(currentLanguage);
+        
+        // Update chat header
+        document.getElementById('chatTitle').textContent = texts.chatTitle;
+        document.getElementById('chatStatus').textContent = texts.chatStatus;
+        
+        // Update welcome message
+        document.getElementById('welcomeMessage').innerHTML = texts.welcomeMessage;
+        document.getElementById('welcomeTime').textContent = texts.welcomeTime;
+        
+        // Update suggestions
+        document.getElementById('suggestion1').textContent = texts.suggestion1;
+        document.getElementById('suggestion2').textContent = texts.suggestion2;
+        document.getElementById('suggestion3').textContent = texts.suggestion3;
+        document.getElementById('suggestion4').textContent = texts.suggestion4;
+        
+        // Update suggestion onclick handlers
+        document.getElementById('suggestion1').onclick = () => sendSuggestion(texts.suggestion1);
+        document.getElementById('suggestion2').onclick = () => sendSuggestion(texts.suggestion2);
+        document.getElementById('suggestion3').onclick = () => sendSuggestion(texts.suggestion3);
+        document.getElementById('suggestion4').onclick = () => sendSuggestion(texts.suggestion4);
+        
+        // Update sidebar
+        document.getElementById('helpTitle').textContent = texts.helpTitle;
+        document.getElementById('sampleQuestionsTitle').textContent = texts.sampleQuestionsTitle;
+        document.getElementById('sampleQuestion1').textContent = texts.sampleQuestion1;
+        document.getElementById('sampleQuestion2').textContent = texts.sampleQuestion2;
+        document.getElementById('sampleQuestion3').textContent = texts.sampleQuestion3;
+        document.getElementById('sampleQuestion4').textContent = texts.sampleQuestion4;
+        document.getElementById('preferencesTitle').textContent = texts.preferencesTitle;
+        document.getElementById('prefFastLabel').innerHTML = `<small>${texts.prefFastLabel}</small>`;
+        document.getElementById('prefCheapLabel').innerHTML = `<small>${texts.prefCheapLabel}</small>`;
+        document.getElementById('prefScenicLabel').innerHTML = `<small>${texts.prefScenicLabel}</small>`;
+        document.querySelector('#exportChatBtn span').textContent = texts.exportChatBtn;
+        
+        // Update feedback section
+        document.getElementById('feedbackTitle').textContent = texts.feedbackTitle;
+        document.getElementById('feedbackGoodText').textContent = texts.feedbackGoodText;
+        document.getElementById('feedbackNeutralText').textContent = texts.feedbackNeutralText;
+        document.getElementById('feedbackBadText').textContent = texts.feedbackBadText;
+        
+        // Update message placeholder
+        document.getElementById('messageInput').placeholder = texts.messagePlaceholder;
+    }
+    
+    // Listen for language changes
+    window.addEventListener('languageChanged', function(e) {
+        updateChatLanguage();
+    });
+</script>
+{% endblock %} 
